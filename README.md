@@ -1,4 +1,4 @@
-# Video Speed Toggle Extension
+# Alt
 
 This Chrome extension enhances your video watching experience by providing convenient playback speed controls.
 
