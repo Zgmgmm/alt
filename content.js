@@ -12,9 +12,13 @@ chrome.storage.sync.get(['playbackSpeed'], (result) => {
 function createSpeedOverlay(video) {
   const overlay = document.createElement('div');
   overlay.className = 'video-speed-overlay';
+  
+  // Check if we're on YouTube
+  const isYouTube = window.location.hostname.includes('youtube.com');
+  
   overlay.style.cssText = `
     position: absolute;
-    top: 50%;
+    top: ${isYouTube ? '20%' : '50%'};
     left: 50%;
     transform: translate(-50%, -50%);
     background: rgba(0, 0, 0, 0.7);
@@ -23,7 +27,7 @@ function createSpeedOverlay(video) {
     border-radius: 5px;
     font-size: 24px;
     font-family: Arial, sans-serif;
-    z-index: 9999;
+    z-index: 2147483647;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s;
@@ -31,6 +35,19 @@ function createSpeedOverlay(video) {
   
   // Create wrapper if video is not already wrapped
   let wrapper = video.parentElement;
+  
+  if (isYouTube) {
+    // For YouTube, we need a different approach
+    // Find the video container instead of creating a wrapper
+    const ytPlayerContainer = findYouTubePlayerContainer(video);
+    
+    if (ytPlayerContainer) {
+      ytPlayerContainer.appendChild(overlay);
+      return overlay;
+    }
+  }
+  
+  // Standard approach for non-YouTube sites
   if (!wrapper.classList.contains('video-speed-wrapper')) {
     wrapper = document.createElement('div');
     wrapper.className = 'video-speed-wrapper';
@@ -43,13 +60,49 @@ function createSpeedOverlay(video) {
   return overlay;
 }
 
+// Function to find YouTube player container
+function findYouTubePlayerContainer(video) {
+  // Try to find the YouTube player container
+  let element = video;
+  let container = null;
+  
+  // Look up the DOM tree for the player container
+  while (element && element !== document.body) {
+    if (element.id === 'ytd-player' || 
+        element.className.includes('html5-video-player') ||
+        element.className.includes('ytp-player-content')) {
+      container = element;
+      break;
+    }
+    element = element.parentElement;
+  }
+  
+  // If we couldn't find a specific container, use the closest div
+  if (!container) {
+    container = video.closest('div.html5-video-container') || 
+               video.closest('.player-container') ||
+               video.parentElement;
+  }
+  
+  return container;
+}
+
 // Show speed overlay temporarily
 function showSpeedOverlay(overlay, speed) {
+  if (!overlay) return;
+  
   overlay.textContent = speed.toFixed(2) + 'x';
   overlay.style.opacity = '1';
-  setTimeout(() => {
+  
+  // Clear any existing timeout to prevent flickering
+  if (overlay.hideTimeout) {
+    clearTimeout(overlay.hideTimeout);
+  }
+  
+  // Store the timeout ID on the overlay element
+  overlay.hideTimeout = setTimeout(() => {
     overlay.style.opacity = '0';
-  }, 1000);
+  }, 1500); // Increased timeout for better visibility
 }
 
 // Listen for speed updates from popup
@@ -85,9 +138,26 @@ function updateVideoSpeeds(speed) {
   const videos = document.getElementsByTagName('video');
   for (const video of videos) {
     video.playbackRate = speed;
-    const overlay = video.parentElement.querySelector('.video-speed-overlay') ||
-                   createSpeedOverlay(video);
-    showSpeedOverlay(overlay, speed);
+    
+    // For YouTube, we need to handle the overlay differently
+    if (window.location.hostname.includes('youtube.com')) {
+      // Try to find existing overlay first
+      let overlay = null;
+      const container = findYouTubePlayerContainer(video);
+      
+      if (container) {
+        overlay = container.querySelector('.video-speed-overlay');
+        if (!overlay) {
+          overlay = createSpeedOverlay(video);
+        }
+        showSpeedOverlay(overlay, speed);
+      }
+    } else {
+      // Standard approach for non-YouTube sites
+      const overlay = video.parentElement.querySelector('.video-speed-overlay') ||
+                     createSpeedOverlay(video);
+      showSpeedOverlay(overlay, speed);
+    }
   }
 }
 
