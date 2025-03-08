@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Speed Toggle</title>
+  <style>
+    body {
+      width: 250px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type="range"] {
+      flex-grow: 1;
+    }
+    .speed-value {
+      min-width: 45px;
+    }
+    .instructions {
+      font-size: 12px;
+      color: #666;
+      margin-top: 15px;
+      border-top: 1px solid #eee;
+      padding-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Video Speed Toggle</h2>
+    <div class="speed-control">
+      <label for="speed">Speed:</label>
+      <input type="range" id="speed" min="0.5" max="4" step="0.25" value="2">
+      <span class="speed-value">2.0x</span>
+    </div>
+    <div class="instructions">
+      <p>Hold Alt key to temporarily return to normal (1x) speed</p>
+      <p>Release Alt key to resume custom speed</p>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
