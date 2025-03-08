@@ -1,6 +1,7 @@
 let currentSpeed = 1;
 let customSpeed = 2;
-let isAltPressed = false;
+let lastAltTime = 0;
+const DOUBLE_ALT_THRESHOLD = 300; // Time window for double Alt press in milliseconds
 
 // Initialize speed from storage
 chrome.storage.sync.get(['playbackSpeed'], (result) => {
@@ -55,24 +56,27 @@ function showSpeedOverlay(overlay, speed) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'speedUpdate') {
     customSpeed = message.speed;
-    if (!isAltPressed) {
+    if (currentSpeed !== 1) {
       updateVideoSpeeds(customSpeed);
     }
   }
 });
 
-// Handle Alt key events
+// Handle Alt key events on document
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Alt' && !isAltPressed) {
-    isAltPressed = true;
-    updateVideoSpeeds(1);
-  }
-});
-
-document.addEventListener('keyup', (e) => {
   if (e.key === 'Alt') {
-    isAltPressed = false;
-    updateVideoSpeeds(customSpeed);
+    e.preventDefault(); // Prevent default Alt key behavior
+    const currentTime = new Date().getTime();
+    const timeDiff = currentTime - lastAltTime;
+    
+    if (timeDiff < DOUBLE_ALT_THRESHOLD) {
+      // Double Alt press detected
+      currentSpeed = currentSpeed === 1 ? customSpeed : 1;
+      updateVideoSpeeds(currentSpeed);
+      lastAltTime = 0; // Reset to prevent triple-press detection
+    } else {
+      lastAltTime = currentTime;
+    }
   }
 });
 
@@ -92,10 +96,9 @@ const observer = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     mutation.addedNodes.forEach((node) => {
       if (node.nodeName === 'VIDEO') {
-        const speed = isAltPressed ? 1 : customSpeed;
-        node.playbackRate = speed;
+        node.playbackRate = currentSpeed;
         const overlay = createSpeedOverlay(node);
-        showSpeedOverlay(overlay, speed);
+        showSpeedOverlay(overlay, currentSpeed);
       }
     });
   });
